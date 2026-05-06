@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**", "refactor/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint (ruff)
+        run: uv run ruff check src/ tests/
+
+      - name: Type check (pyright)
+        run: uv run pyright src/
+
+      - name: Test (pytest)
+        run: uv run pytest tests/ -x --tb=short
