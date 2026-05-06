@@ -1,4 +1,4 @@
-.PHONY: install test lint format typecheck check
+.PHONY: install test lint format typecheck check run
 
 install:
 	uv sync
@@ -19,3 +19,6 @@ typecheck:
 	uv run pyright src/
 
 check: lint typecheck test
+
+run:
+	uv run classify -
