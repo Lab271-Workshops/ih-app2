@@ -5,7 +5,9 @@ from .models import (
     ClassificationResult,
     ScoreBreakdown,
     Severity,
+    SourceReliability,
     ThreatReport,
+    TimeSensitivity,
 )
 
 _SOURCE_SCORES: dict[str, int] = {
@@ -32,16 +34,16 @@ _THRESHOLDS: list[tuple[int, Severity]] = [
 ]
 
 
-def _score_source(reliability: str) -> int:
-    return _SOURCE_SCORES.get(reliability, 0)
+def _score_source(reliability: SourceReliability) -> int:
+    return _SOURCE_SCORES[reliability]
 
 
 def _score_corroboration(sources: int) -> int:
     return min(sources * 10, 20)
 
 
-def _score_time(sensitivity: str) -> int:
-    return _TIME_SCORES.get(sensitivity, 10)
+def _score_time(sensitivity: TimeSensitivity) -> int:
+    return _TIME_SCORES[sensitivity]
 
 
 def _score_exposure(exposure: AssetExposure) -> int:
@@ -50,7 +52,7 @@ def _score_exposure(exposure: AssetExposure) -> int:
         score += 10
     if exposure.confidential:
         score += 10
-    score += min(exposure.systems * 5, 5)  # +5 per system, cap at 5
+    score += exposure.systems * 5
     return min(score, 25)
 
 

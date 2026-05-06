@@ -74,6 +74,12 @@ class TestExposureScoring:
     def test_systems(self):
         assert _score_exposure(AssetExposure(systems=1)) == 5
 
+    def test_systems_two(self):
+        assert _score_exposure(AssetExposure(systems=2)) == 10
+
+    def test_systems_three(self):
+        assert _score_exposure(AssetExposure(systems=3)) == 15
+
     def test_capped_at_25(self):
         exposure = AssetExposure(internet_facing=True, confidential=True, systems=5)
         assert _score_exposure(exposure) == 25
@@ -155,3 +161,76 @@ class TestClassify:
         report = self._make_report(source_reliability="A")
         result = classify(report)
         assert "(A)" in result.rationale
+
+    # Threshold boundary tests
+    def test_score_80_is_critical(self):
+        # A(25) + 2src(20) + active(25) + internet(10) = 80
+        report = ThreatReport(
+            source_reliability="A",
+            corroborating_sources=2,
+            time_sensitivity="active",
+            asset_exposure=AssetExposure(internet_facing=True),
+        )
+        result = classify(report)
+        assert result.score == 80
+        assert result.severity == "CRITICAL"
+
+    def test_score_75_is_high(self):
+        # A(25) + 2src(20) + <7d(20) + confidential(10) = 75
+        report = ThreatReport(
+            source_reliability="A",
+            corroborating_sources=2,
+            time_sensitivity="<7d",
+            asset_exposure=AssetExposure(confidential=True),
+        )
+        result = classify(report)
+        assert result.score == 75
+        assert result.severity == "HIGH"
+
+    def test_score_60_is_high(self):
+        # B(20) + 1src(10) + <30d(15) + internet(10) + systems(1*5=5) = 60
+        report = ThreatReport(
+            source_reliability="B",
+            corroborating_sources=1,
+            time_sensitivity="<30d",
+            asset_exposure=AssetExposure(internet_facing=True, systems=1),
+        )
+        result = classify(report)
+        assert result.score == 60
+        assert result.severity == "HIGH"
+
+    def test_score_55_is_medium(self):
+        # C(15) + 1src(10) + <7d(20) + internet(10) = 55
+        report = ThreatReport(
+            source_reliability="C",
+            corroborating_sources=1,
+            time_sensitivity="<7d",
+            asset_exposure=AssetExposure(internet_facing=True),
+        )
+        result = classify(report)
+        assert result.score == 55
+        assert result.severity == "MEDIUM"
+
+    def test_score_40_is_medium(self):
+        # D(10) + 1src(10) + other(10) + internet(10) = 40
+        report = ThreatReport(
+            source_reliability="D",
+            corroborating_sources=1,
+            time_sensitivity="other",
+            asset_exposure=AssetExposure(internet_facing=True),
+        )
+        result = classify(report)
+        assert result.score == 40
+        assert result.severity == "MEDIUM"
+
+    def test_score_35_is_low(self):
+        # E(5) + 1src(10) + other(10) + internet(10) = 35
+        report = ThreatReport(
+            source_reliability="E",
+            corroborating_sources=1,
+            time_sensitivity="other",
+            asset_exposure=AssetExposure(internet_facing=True),
+        )
+        result = classify(report)
+        assert result.score == 35
+        assert result.severity == "LOW"

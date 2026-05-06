@@ -2,14 +2,22 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import asdict
 from typing import Any
 
 from .models import AssetExposure, ThreatReport
 from .scorer import classify
 
+_VALID_RELIABILITIES = {"A", "B", "C", "D", "E", "F"}
+_VALID_TIME_SENSITIVITIES = {"active", "<7d", "<30d", "other"}
+
 
 def _parse_report(data: dict[str, Any]) -> ThreatReport:
+    source_reliability = data["source_reliability"]
+    if source_reliability not in _VALID_RELIABILITIES:
+        raise ValueError(f"Invalid source_reliability: {source_reliability!r}")
+    time_sensitivity = data["time_sensitivity"]
+    if time_sensitivity not in _VALID_TIME_SENSITIVITIES:
+        raise ValueError(f"Invalid time_sensitivity: {time_sensitivity!r}")
     exposure_data = data.get("asset_exposure", {})
     exposure = AssetExposure(
         internet_facing=exposure_data.get("internet_facing", False),
@@ -17,19 +25,11 @@ def _parse_report(data: dict[str, Any]) -> ThreatReport:
         systems=exposure_data.get("systems", 0),
     )
     return ThreatReport(
-        source_reliability=data["source_reliability"],
+        source_reliability=source_reliability,
         corroborating_sources=data.get("corroborating_sources", 0),
-        time_sensitivity=data["time_sensitivity"],
+        time_sensitivity=time_sensitivity,
         asset_exposure=exposure,
     )
-
-
-def _result_to_dict(result: Any) -> dict[str, Any]:
-    d = asdict(result)
-    # Flatten breakdown from nested dataclass
-    d["breakdown"] = asdict(result.breakdown)
-    d["breakdown"].pop("total", None)  # total is a property, not in asdict
-    return d
 
 
 def main() -> None:

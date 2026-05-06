@@ -78,6 +78,24 @@ class TestCLIFileInput:
         data = json.loads(result.stdout)
         assert "error" in data
 
+    def test_invalid_source_reliability_exits_nonzero(self, tmp_path: Path):
+        bad_report = tmp_path / "bad.json"
+        bad_report.write_text(json.dumps({**VALID_REPORT, "source_reliability": "Z"}))
+        result = run_classify(str(bad_report))
+        assert result.returncode != 0
+        data = json.loads(result.stdout)
+        assert "error" in data
+
+    def test_invalid_time_sensitivity_exits_nonzero(self, tmp_path: Path):
+        bad_report = tmp_path / "bad.json"
+        bad_report.write_text(
+            json.dumps({**VALID_REPORT, "time_sensitivity": "yesterday"})
+        )
+        result = run_classify(str(bad_report))
+        assert result.returncode != 0
+        data = json.loads(result.stdout)
+        assert "error" in data
+
 
 class TestCLIStdinInput:
     def test_classify_stdin(self):
